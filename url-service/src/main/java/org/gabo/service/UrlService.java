@@ -2,59 +2,82 @@ package org.gabo.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.NotFoundException;
+import jakarta.validation.ConstraintViolationException;
+import org.gabo.domain.OriginalUrl;
+import org.gabo.domain.generator.AliasGenerator;
+import org.gabo.dto.PaginatedResult;
+import org.gabo.exception.AliasAlreadyExistsException;
+import org.gabo.exception.AliasAlreadyInactiveException;
+import org.gabo.exception.AliasGenerationException;
+import org.gabo.exception.AliasNotFoundException;
 import org.gabo.model.ShortUrl;
 import org.gabo.repository.UrlRepository;
 
-import java.util.List;
-import java.util.UUID;
+import java.security.SecureRandom;
 
 @ApplicationScoped
 public class UrlService {
     private final UrlRepository urlRepository;
+    private final AliasGenerator aliasGenerator;
 
-    public UrlService(UrlRepository urlRepository){
+    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator) {
         this.urlRepository = urlRepository;
+        this.aliasGenerator = aliasGenerator;
     }
 
     @Transactional
     public ShortUrl create(String originalUrl, String alias){
-        String finalAlias = (alias == null || alias.isBlank()) ? generateAlias() : alias.trim();
+        String finalAlias = (alias == null || alias.isBlank()) ? generateUniqueAlias() : alias.trim();
 
-        if (urlRepository.existsByAlias(finalAlias)) {
-            throw new IllegalArgumentException("Already exists: " + finalAlias);
+        try{
+            if (urlRepository.existsByAlias(finalAlias)) {
+                throw new AliasAlreadyExistsException(finalAlias);
+            }
+
+            var normalizedUrl = new OriginalUrl(originalUrl);
+
+            var url = new ShortUrl();
+            url.setOriginalUrl(normalizedUrl.getValue());
+            url.setAlias(finalAlias);
+
+            urlRepository.persist(url);
+            return url;
+        } catch (ConstraintViolationException e){
+            throw new AliasAlreadyExistsException(finalAlias);
         }
-
-        if (!originalUrl.startsWith("http://") && !originalUrl.startsWith("https://")) {
-            originalUrl = "https://" + originalUrl;
-        }
-
-        var url = new ShortUrl();
-        url.setOriginalUrl(originalUrl);
-        url.setAlias(finalAlias);
-
-        urlRepository.persist(url);
-        return url;
     }
 
     public ShortUrl resolve(String alias) {
         return urlRepository.findByAlias(alias)
                 .filter(ShortUrl::isActive)
-                .orElseThrow(() -> new NotFoundException("Alias not found: " + alias));
+                .orElseThrow(() -> new AliasNotFoundException(alias));
     }
 
-    public List<ShortUrl> listAll() {
-        return urlRepository.listAll();
+    public PaginatedResult listByPage(int page, int size) {
+        int safePage = Math.max(page, 0);
+        int safeSize = (size <= 0 || size > 100) ? 20 : size;
+        return urlRepository.findPaginated(safePage, safeSize);
     }
 
     @Transactional
     public void softDelete(String alias) {
-        ShortUrl url = resolve(alias);
+        ShortUrl url = urlRepository.findByAlias(alias).orElseThrow(() -> new AliasNotFoundException(alias));
+
+        if (!url.isActive()) {
+            throw new AliasAlreadyInactiveException(alias);
+        }
+
         url.setActive(false);
-        urlRepository.persist(url);
     }
 
-    private String generateAlias() {
-        return UUID.randomUUID().toString().substring(0, 6);
+    private String generateUniqueAlias() {
+        int maxAttempts = 5;
+        for (int i = 0; i < maxAttempts; i++) {
+            String alias = aliasGenerator.generate();
+            if (!urlRepository.existsByAlias(alias)) {
+                return alias;
+            }
+        }
+        throw new AliasGenerationException();
     }
 }

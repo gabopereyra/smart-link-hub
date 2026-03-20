@@ -6,9 +6,6 @@ import jakarta.ws.rs.core.Response;
 import org.gabo.model.ShortUrl;
 import org.gabo.service.UrlService;
 
-import java.util.ArrayList;
-import java.util.List;
-
 
 @Path("/api/urls")
 @Produces(MediaType.APPLICATION_JSON)
@@ -30,12 +27,11 @@ public class UrlResource {
     }
 
 
-    /**
-     * @return all urls
-     */
     @GET
-    public Response getAll(){
-        return Response.ok(urlService.listAll()).build();
+    public Response getByPage(
+            @QueryParam("page") int page,
+            @QueryParam("size") int size) {
+        return Response.ok(urlService.listByPage(page, size)).build();
     }
 
     @GET
