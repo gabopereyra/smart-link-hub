@@ -1,5 +1,6 @@
 package org.gabo.resource;
 
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -20,6 +21,7 @@ public class UrlResource {
     public record CreateRequest(String originalUrl, String alias) {}
 
     @POST
+    @RolesAllowed("user")
     public Response create(CreateRequest req) {
         ShortUrl created = urlService.create(req.originalUrl(), req.alias());
 
@@ -28,6 +30,7 @@ public class UrlResource {
 
 
     @GET
+    @RolesAllowed("user")
     public Response getByPage(
             @QueryParam("page") int page,
             @QueryParam("size") int size) {
@@ -36,6 +39,7 @@ public class UrlResource {
 
     @GET
     @Path("/{alias}")
+    @RolesAllowed("user")
     public Response resolve(@PathParam("alias") String alias){
         ShortUrl url = urlService.resolve(alias);
         return Response.status(302)
@@ -45,6 +49,7 @@ public class UrlResource {
 
     @DELETE
     @Path("/{alias}")
+    @RolesAllowed("admin")
     public Response delete(@PathParam("alias") String alias){
         urlService.softDelete(alias);
         return Response.noContent().build();
