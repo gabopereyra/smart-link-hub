@@ -1,6 +1,7 @@
 package org.gabo.resource;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -12,6 +13,7 @@ import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestSecurity(user = "testuser", roles = {"user"})
 class UrlResourceTest {
     @Test
     @Order(1)
@@ -129,6 +131,7 @@ class UrlResourceTest {
 
     @Test
     @Order(9)
+    @TestSecurity(user = "testadmin", roles = {"admin"})
     void delete_existingAlias_returns204() {
         given()
                 .when()
@@ -139,6 +142,7 @@ class UrlResourceTest {
 
     @Test
     @Order(10)
+    @TestSecurity(user = "testadmin", roles = {"admin"})
     void delete_alreadyDeletedAlias_returns409() {
         // "my-alias" was deleted in test Order(9), must return 409
         given()
@@ -150,6 +154,7 @@ class UrlResourceTest {
 
     @Test
     @Order(11)
+    @TestSecurity(user = "testadmin", roles = {"admin"})
     void delete_nonExistingAlias_returns404() {
         given()
                 .when()
@@ -169,4 +174,15 @@ class UrlResourceTest {
                 .then()
                 .statusCode(404);
     }
+
+    @Test
+    @Order(13)
+    void delete_existingAlias_returns403() {
+        given()
+                .when()
+                .delete("/api/urls/my-alias")
+                .then()
+                .statusCode(403);
+    }
+
 }
