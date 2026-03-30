@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: gateway
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/smartlink-hub
+  cloud:
+    gateway:
+      routes:
+        - id: url-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/urls/**
+
+server:
+  port: 8081
