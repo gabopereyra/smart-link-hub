@@ -1,0 +1,29 @@
+# ---- Build stage ----
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
+
+WORKDIR /app
+
+# Copiamos pom y descargamos dependencias (mejora cache)
+COPY pom.xml .
+RUN mvn dependency:go-offline
+
+# Copiamos código fuente
+COPY src ./src
+
+# Build del jar
+RUN mvn clean package -DskipTests
+
+
+# ---- Runtime stage ----
+FROM eclipse-temurin:21-jdk-jammy
+
+WORKDIR /app
+
+# Copiamos el jar generado
+COPY --from=builder /app/target/*.jar app.jar
+
+# Puerto del gateway
+EXPOSE 8081
+
+# Ejecutar la app
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -20,7 +20,9 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: admin
     ports:
       - "8180:8080"
-      
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+  
   url-service:
     build:
       context: ./url-service
@@ -36,6 +38,21 @@ services:
       - QUARKUS_DATASOURCE_USERNAME=admin
       - QUARKUS_DATASOURCE_PASSWORD=admin
       - JAVA_OPTS_APPEND=-Duser.timezone=America/Argentina/Buenos_Aires
+      - QUARKUS_OIDC_AUTH_SERVER_URL=http://keycloak:8080/realms/smartlink-hub
+  
+  gateway:
+    build:
+      context: ./gateway
+    ports:
+      - "8081:8081"
+    depends_on:
+      - url-service
+      - keycloak
+    environment:
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/smartlink-hub
+      - SPRING_CLOUD_GATEWAY_ROUTES_0_URI=http://url-service:8080
+      - SPRING_CLOUD_GATEWAY_ROUTES_0_PREDICATES_0=Path=/api/urls/**
 
 volumes:
   postgres_data:
+  keycloak_data:
