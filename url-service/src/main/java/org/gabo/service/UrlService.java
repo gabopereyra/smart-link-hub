@@ -3,9 +3,12 @@ package org.gabo.service;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolationException;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.gabo.domain.OriginalUrl;
 import org.gabo.domain.generator.AliasGenerator;
 import org.gabo.dto.PaginatedResult;
+import org.gabo.event.UrlClickedEvent;
 import org.gabo.exception.AliasAlreadyExistsException;
 import org.gabo.exception.AliasAlreadyInactiveException;
 import org.gabo.exception.AliasGenerationException;
@@ -13,23 +16,25 @@ import org.gabo.exception.AliasNotFoundException;
 import org.gabo.model.ShortUrl;
 import org.gabo.repository.UrlRepository;
 
-import java.security.SecureRandom;
+import java.time.LocalDateTime;
 
 @ApplicationScoped
 public class UrlService {
     private final UrlRepository urlRepository;
     private final AliasGenerator aliasGenerator;
+    private final Emitter<UrlClickedEvent> emitter;
 
-    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator) {
+    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator, @Channel("url_clicked") Emitter<UrlClickedEvent> emitter) {
         this.urlRepository = urlRepository;
         this.aliasGenerator = aliasGenerator;
+        this.emitter = emitter;
     }
 
     @Transactional
-    public ShortUrl create(String originalUrl, String alias){
+    public ShortUrl create(String originalUrl, String alias) {
         String finalAlias = (alias == null || alias.isBlank()) ? generateUniqueAlias() : alias.trim();
 
-        try{
+        try {
             if (urlRepository.existsByAlias(finalAlias)) {
                 throw new AliasAlreadyExistsException(finalAlias);
             }
@@ -42,7 +47,7 @@ public class UrlService {
 
             urlRepository.persist(url);
             return url;
-        } catch (ConstraintViolationException e){
+        } catch (ConstraintViolationException e) {
             throw new AliasAlreadyExistsException(finalAlias);
         }
     }
@@ -50,6 +55,10 @@ public class UrlService {
     public ShortUrl resolve(String alias) {
         return urlRepository.findByAlias(alias)
                 .filter(ShortUrl::isActive)
+                .map(e -> {
+                    emitter.send(new UrlClickedEvent(e.getAlias(), e.getOriginalUrl(), LocalDateTime.now()));
+                    return e;
+                })
                 .orElseThrow(() -> new AliasNotFoundException(alias));
     }
 
