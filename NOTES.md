@@ -58,3 +58,9 @@ Este se encuentra deprecado, en consecuencia se recomienda ya no utilizarla, en 
 ```
 
 - Al configurar el SecurityWebFilterChain es necesario desactivar el CRSF para obtener una respuesta más acorde ante un caso donde enviemos una petición sin token, caso no lo hagamos obtendremos algo como "An expected CSRF token cannot be found".
+
+# Semana 3
+## Cosas aprendidas
+- RabbitMQ, sobre la utilización de canales que poseen guion medio, ejemplo: url-clicked, traen problemas por ambigüedades con las propiedades al agregarlos en un Docker Compose (los puntos y los guiones medios para docker compose se suelen traducir en guiones bajos)
+- Puede que a pesar que tengamos un archivo de propiedades correctamente definido y que la variable en el docker compose sea correcta pero que a pesar de ellos no lo levante, una forma de evitar esto es utilizando el mismo archivo de propiedades pero diferenciando los perfiles a partir de la anotacion "%nombre_perfil...."
+- AL dia de la fecha Quarkus en sus versiones 3.x.x parece tener incidentes al intentar realizar el binding entre el exchange y la queue, a pesar de la correcta configuración en el archivo .properties el bind se realizaba con un valor de routing-key de *#* en lugar del nombre indicado, para solucionar esto hubo que crear una clase que haga un seteo de ciertas propiedades de forma manual. (ver rabbitmq-routing-key-consumer-issue.md)

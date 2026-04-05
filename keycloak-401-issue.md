@@ -32,7 +32,7 @@ Spring Security valida estrictamente que el `iss` del token coincida exactamente
 
 ### Solución
 
-Se configuró correctamente el `Frontend URL` en Keycloak para alinear el issuer:
+Se configuró correctamente el `Frontend URL` en Keycloak para alinear el issuer, esto se realiza en "Realm Settings > General > Frontend URL" 
 
 ```
 http://keycloak:8080
