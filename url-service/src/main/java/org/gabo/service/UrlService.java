@@ -24,7 +24,7 @@ public class UrlService {
     private final AliasGenerator aliasGenerator;
     private final Emitter<UrlClickedEvent> emitter;
 
-    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator, @Channel("url_clicked") Emitter<UrlClickedEvent> emitter) {
+    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator, @Channel("url_clicked_out") Emitter<UrlClickedEvent> emitter) {
         this.urlRepository = urlRepository;
         this.aliasGenerator = aliasGenerator;
         this.emitter = emitter;
@@ -56,7 +56,8 @@ public class UrlService {
         return urlRepository.findByAlias(alias)
                 .filter(ShortUrl::isActive)
                 .map(e -> {
-                    emitter.send(new UrlClickedEvent(e.getAlias(), e.getOriginalUrl(), LocalDateTime.now()));
+                    var msg = new UrlClickedEvent(e.getAlias(), e.getOriginalUrl(), LocalDateTime.now());
+                    emitter.send(msg);
                     return e;
                 })
                 .orElseThrow(() -> new AliasNotFoundException(alias));
