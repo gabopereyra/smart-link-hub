@@ -18,6 +18,7 @@ public class DomainExceptionMapper implements ExceptionMapper<DomainException> {
             case AliasAlreadyExistsException ignored -> 409;
             case AliasAlreadyInactiveException ignored -> 409;
             case AliasGenerationException ignored -> 503;
+            case UnsafeUrlException ignore -> 400;
             default -> 500;
         };
         return build(status, e.getMessage());

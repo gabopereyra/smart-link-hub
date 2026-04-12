@@ -5,14 +5,17 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolationException;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.gabo.application.service.AiServiceClient;
 import org.gabo.domain.OriginalUrl;
 import org.gabo.domain.generator.AliasGenerator;
+import org.gabo.domain.model.UrlAnalysisResult;
 import org.gabo.dto.PaginatedResult;
 import org.gabo.event.UrlClickedEvent;
 import org.gabo.exception.AliasAlreadyExistsException;
 import org.gabo.exception.AliasAlreadyInactiveException;
 import org.gabo.exception.AliasGenerationException;
 import org.gabo.exception.AliasNotFoundException;
+import org.gabo.exception.UnsafeUrlException;
 import org.gabo.model.ShortUrl;
 import org.gabo.repository.UrlRepository;
 
@@ -23,11 +26,13 @@ public class UrlService {
     private final UrlRepository urlRepository;
     private final AliasGenerator aliasGenerator;
     private final Emitter<UrlClickedEvent> emitter;
+    private final AiServiceClient aiServiceClient;
 
-    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator, @Channel("url_clicked_out") Emitter<UrlClickedEvent> emitter) {
+    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator, @Channel("url_clicked_out") Emitter<UrlClickedEvent> emitter, AiServiceClient aiServiceClient) {
         this.urlRepository = urlRepository;
         this.aliasGenerator = aliasGenerator;
         this.emitter = emitter;
+        this.aiServiceClient = aiServiceClient;
     }
 
     @Transactional
@@ -41,6 +46,8 @@ public class UrlService {
 
             var normalizedUrl = new OriginalUrl(originalUrl);
 
+            analyzeUrl(normalizedUrl);
+
             var url = new ShortUrl();
             url.setOriginalUrl(normalizedUrl.getValue());
             url.setAlias(finalAlias);
@@ -49,6 +56,14 @@ public class UrlService {
             return url;
         } catch (ConstraintViolationException e) {
             throw new AliasAlreadyExistsException(finalAlias);
+        }
+    }
+
+    private void analyzeUrl(OriginalUrl normalizedUrl) {
+        String url = normalizedUrl.getValue();
+        UrlAnalysisResult result = aiServiceClient.analyzeUrl(url);
+        if(!result.safe()){
+          throw new UnsafeUrlException(url, result.reason());
         }
     }
 
