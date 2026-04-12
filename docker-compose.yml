@@ -79,6 +79,18 @@ services:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=secret
 
+  ai-service:
+    build: 
+      context: ./ai-service
+      dockerfile: src/main/docker/Dockerfile.jvm
+    container_name: ai-service
+    ports:
+      - "8083:8083"
+    environment:
+      - QUARKUS_LANGCHAIN4J_AI_GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - url-service
+      
 volumes:
   postgres_data:
   keycloak_data:
