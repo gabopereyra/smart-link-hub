@@ -64,3 +64,14 @@ Este se encuentra deprecado, en consecuencia se recomienda ya no utilizarla, en 
 - RabbitMQ, sobre la utilización de canales que poseen guion medio, ejemplo: url-clicked, traen problemas por ambigüedades con las propiedades al agregarlos en un Docker Compose (los puntos y los guiones medios para docker compose se suelen traducir en guiones bajos)
 - Puede que a pesar que tengamos un archivo de propiedades correctamente definido y que la variable en el docker compose sea correcta pero que a pesar de ellos no lo levante, una forma de evitar esto es utilizando el mismo archivo de propiedades pero diferenciando los perfiles a partir de la anotacion "%nombre_perfil...."
 - AL dia de la fecha Quarkus en sus versiones 3.x.x parece tener incidentes al intentar realizar el binding entre el exchange y la queue, a pesar de la correcta configuración en el archivo .properties el bind se realizaba con un valor de routing-key de *#* en lugar del nombre indicado, para solucionar esto hubo que crear una clase que haga un seteo de ciertas propiedades de forma manual. (ver rabbitmq-routing-key-consumer-issue.md)
+
+# Semana 4
+## Cosas aprendidas
+- Se decidió implementar un nuevo servicio que haga uso de la IA en pos de ayudarnos a identificar potenciales URLs maliciosas, para ellos se hizo uso de la dependencia **langchain4j** la cual permite conectarse con diferentes LLMs sin tener demasiados detalles de los mismos. De hecho luego a partir de unas minimas configuraciones en el proyecto ya estamos en condiciones de enviar peticiones.
+    - Para conocer más de la dependencia: https://docs.quarkiverse.io/quarkus-langchain4j/dev/index.html#
+
+- Con el agregado del servicio para el analisis de las URLs se decidió sumar ligeros ajustes que hacen a la resiliencia, para ello se sumo al proyecto la dependencia de Quarkus a partir de la dependencia **quarkus-smallrye-fault-tolerance**, esta permite a partir de anotaciones muy simples configurar mecanismos de resilencia. 
+    - Para conocer más de la dependencia:
+        - https://quarkus.io/guides/smallrye-fault-tolerance 
+        - https://smallrye.io/docs/smallrye-fault-tolerance/6.10.0/index.html
+        
