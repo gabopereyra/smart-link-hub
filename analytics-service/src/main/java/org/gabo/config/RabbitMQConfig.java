@@ -1,6 +1,7 @@
 package org.gabo.config;
 
 import io.quarkus.runtime.StartupEvent;
+import io.vertx.core.json.JsonObject;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.rabbitmq.RabbitMQClient;
 import io.vertx.rabbitmq.RabbitMQOptions;
@@ -26,9 +27,11 @@ public class RabbitMQConfig {
 
         RabbitMQClient client = RabbitMQClient.create(vertx, options);
 
+        JsonObject queueArgs = new JsonObject().put("x-dead-letter-exchange", "url-clicked-dlq");
+
         client.start()
                 .flatMap(v -> client.exchangeDeclare(config.exchange(), "direct", true, false))
-                .flatMap(v -> client.queueDeclare(config.queue(), true, false, false))
+                .flatMap(v -> client.queueDeclare(config.queue(), true, false, false, queueArgs))
                 .flatMap(v -> client.queueBind(config.queue(), config.exchange(), config.routingKey()))
                 .flatMap(v -> client.stop())
                 .await().indefinitely();
