@@ -1,5 +1,8 @@
 package org.gabo.service;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolationException;
@@ -27,12 +30,22 @@ public class UrlService {
     private final AliasGenerator aliasGenerator;
     private final Emitter<UrlClickedEvent> emitter;
     private final AiServiceClient aiServiceClient;
+    private final MeterRegistry registry;
+    private Counter urlsCreated;
 
-    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator, @Channel("url_clicked_out") Emitter<UrlClickedEvent> emitter, AiServiceClient aiServiceClient) {
+    public UrlService(UrlRepository urlRepository, AliasGenerator aliasGenerator, @Channel("url_clicked_out") Emitter<UrlClickedEvent> emitter, AiServiceClient aiServiceClient, MeterRegistry registry) {
         this.urlRepository = urlRepository;
         this.aliasGenerator = aliasGenerator;
         this.emitter = emitter;
         this.aiServiceClient = aiServiceClient;
+        this.registry = registry;
+    }
+
+    @PostConstruct
+    void init() {
+        urlsCreated = Counter.builder("urls.created.total")
+                .description("Total URLs created")
+                .register(registry);
     }
 
     @Transactional
@@ -53,6 +66,7 @@ public class UrlService {
             url.setAlias(finalAlias);
 
             urlRepository.persist(url);
+            urlsCreated.increment();
             return url;
         } catch (ConstraintViolationException e) {
             throw new AliasAlreadyExistsException(finalAlias);

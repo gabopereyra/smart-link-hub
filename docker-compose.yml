@@ -67,6 +67,8 @@ services:
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://keycloak:8080/realms/smartlink-hub
       - SPRING_CLOUD_GATEWAY_ROUTES_0_URI=http://url-service:8080
       - SPRING_CLOUD_GATEWAY_ROUTES_0_PREDICATES_0=Path=/api/urls/**
+      - JAVA_TOOL_OPTIONS=-Dspring.profiles.active=docker
+      - TZ=America/Argentina/Buenos_Aires
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -90,8 +92,56 @@ services:
       - QUARKUS_LANGCHAIN4J_AI_GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
       - url-service
-      
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"  
+    depends_on:
+      - url-service
+      - analytics-service
+      - ai-service
+      - gateway
+  
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+    - prometheus
+    volumes:
+      - grafana-data:/var/lib/grafana
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP/Protobuf
+    depends_on:
+      - url-service
+      - analytics-service
+      - ai-service
+      - gateway
+  
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:latest
+    volumes:
+      - ./promtail.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+
 volumes:
   postgres_data:
   keycloak_data:
   rabbitmq_data:
+  grafana-data:
