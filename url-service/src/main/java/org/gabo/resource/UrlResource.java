@@ -1,5 +1,6 @@
 package org.gabo.resource;
 
+import io.quarkus.logging.Log;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -41,7 +42,10 @@ public class UrlResource {
     @Path("/{alias}")
     @RolesAllowed("user")
     public Response resolve(@PathParam("alias") String alias){
+        Log.infof("Resolving alias: %s", alias);
         ShortUrl url = urlService.resolve(alias);
+        Log.infof("Redirecting to: %s", url.getOriginalUrl());
+
         return Response.status(302)
                 .header("Location", url.getOriginalUrl())
                 .build();
